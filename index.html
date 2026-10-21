@@ -204,7 +204,7 @@ body{margin:0}
 <input type="file" id="invCam" accept="image/*" capture="environment" hidden>
 <script>
 // MTB servis – ostrá verze (PWA + Supabase)
-const VERZE = 'verze 1';
+const VERZE = 'verze 2';
 const SUPABASE_URL = 'https://klpcgnivfvczvvyoqzal.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_6mo7Xg3GQ4GTi9Qu7AAeKw_HKPSXacV';
 const FUNKCE = SUPABASE_URL + '/functions/v1/mtb';
@@ -701,6 +701,8 @@ async function zmensiObrazek(file){
     return blob ? new File([blob], 'faktura.jpg', {type:'image/jpeg'}) : file;
   } catch { return file; }
 }
+function cisloKlic(c){ const d = String(c||'').replace(/\D/g,''); return d.length >= 5 ? d : null; }
+function duplikat(cislo){ const k = cisloKlic(cislo); return k ? S.doklady.find(d=>cisloKlic(d.cislo)===k) : null; }
 function bezpecneJmeno(n){ return n.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'-').slice(-60); }
 
 async function novaFaktura(file){
@@ -716,6 +718,12 @@ async function novaFaktura(file){
     const {data:{session}} = await sb.auth.getSession();
     const r = await fetch(FUNKCE+'?akce=faktura', {method:'POST', headers:{'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token, 'apikey':SUPABASE_KEY}, body:JSON.stringify({cesta})});
     const out = await r.json().catch(()=>({chyba:'Odpověď funkce není JSON (HTTP '+r.status+')'}));
+    const dup = out.navrh && duplikat(out.navrh.cislo);
+    if (dup){
+      try { await sb.storage.from(BUCKET).remove([cesta]); } catch {}
+      zavri(); toast('Faktura '+(dup.cislo||'')+' z '+fD(dup.datum)+' už je uložená – zahozeno');
+      return;
+    }
     if (out.navrh){ navrh = out.navrh; info = 'Položky přečetla AI. Zkontroluj datum, ceny a přiřazení ke komponentám.'; }
     else info = 'AI fakturu nepřečetla ('+(out.chyba||'HTTP '+r.status)+'). Vyplň položky ručně.';
   } catch(e){
@@ -764,6 +772,8 @@ function formularFaktury(cesta, n, info){
     cti();
     const datum = document.getElementById('nfDat').value;
     if (!datum){ toast('Doplň datum'); return; }
+    const dup = duplikat(document.getElementById('nfCis').value);
+    if (dup){ toast('Faktura '+(dup.cislo||'')+' už je uložená – neukládám'); return; }
     const polozky = pol.filter(p=>p.popis.trim() || p.cena!=null).map((p,i)=>({poradi:i, popis:p.popis.trim()||'Položka', cena:p.cena,
       komponenta: p.v.startsWith('k:') ? p.v.slice(2) : null, kategorie: p.v==='doplnky' ? 'doplnky' : 'dily'}));
     const prace = Number(document.getElementById('nfPr').value)||0;
