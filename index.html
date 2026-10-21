@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MTB servis</title>
+<meta name="theme-color" content="#1c1d20">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MTB servis">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+/* iOS styl: velký nadpis, segmentový přepínač nahoře, seskupené seznamy; stav = zelená/oranžová/červená */
+:root{
+  --bg:#f2f2f7; --card:#ffffff; --fg:#000000; --fg2:rgba(60,60,67,.62); --fg3:rgba(60,60,67,.38);
+  --sep:rgba(60,60,67,.18); --fill:rgba(118,118,128,.14); --accent:#2f72c4; --accent-soft:rgba(47,114,196,.12);
+  --ok:#28a745; --warn:#e08600; --bad:#e5322b; --ok-soft:rgba(40,167,69,.14); --warn-soft:rgba(224,134,0,.15); --bad-soft:rgba(229,50,43,.13);
+  --shadow:0 1px 0 rgba(0,0,0,.04);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-d:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#000000; --card:#1c1c1e; --fg:#ffffff; --fg2:rgba(235,235,245,.62); --fg3:rgba(235,235,245,.34);
+  --sep:rgba(84,84,88,.6); --fill:rgba(118,118,128,.26); --accent:#5a9fe8; --accent-soft:rgba(90,159,232,.18);
+  --ok:#30d158; --warn:#ff9f0a; --bad:#ff453a; --ok-soft:rgba(48,209,88,.18); --warn-soft:rgba(255,159,10,.18); --bad-soft:rgba(255,69,58,.18);
+  --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#000000; --card:#1c1c1e; --fg:#ffffff; --fg2:rgba(235,235,245,.62); --fg3:rgba(235,235,245,.34);
+  --sep:rgba(84,84,88,.6); --fill:rgba(118,118,128,.26); --accent:#5a9fe8; --accent-soft:rgba(90,159,232,.18);
+  --ok:#30d158; --warn:#ff9f0a; --bad:#ff453a; --ok-soft:rgba(48,209,88,.18); --warn-soft:rgba(255,159,10,.18); --bad-soft:rgba(255,69,58,.18);
+  --shadow:none; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.35;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+.wrap{max-width:680px;margin:0 auto}
+.num{font-variant-numeric:tabular-nums}
+header.top{padding-top:14px}
+.demo{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--fg2);margin-bottom:6px}
+.demo b{background:var(--warn-soft);color:var(--warn);font-weight:600;padding:2px 8px;border-radius:6px;font-size:12px;letter-spacing:.02em}
+h1{font-family:var(--font-d);font-size:34px;font-weight:700;letter-spacing:-.02em;margin:0 0 2px;text-wrap:balance}
+.sub{color:var(--fg2);font-size:14px;margin:0 0 14px}
+
+.seg{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--fill);
+  border-radius:10px;padding:2px;margin:0 0 18px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.seg button{border:0;background:transparent;color:var(--fg);font:500 13.5px var(--font);padding:7px 2px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.seg button[aria-selected="true"]{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.14);font-weight:600}
+.seg button:focus-visible,.btn:focus-visible,.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.gh{font-family:var(--font-d);font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--fg);margin:26px 4px 9px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.gh > span:first-child{display:flex;align-items:center;gap:9px;min-width:0}
+.gh > span + span{font-family:var(--font);font-size:13px;font-weight:400;letter-spacing:0;color:var(--fg2);text-align:right}
+.gh .ic{width:28px;height:28px;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center;flex-shrink:0}
+.gh .ic svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sheet .gh{font-size:16px;margin:20px 4px 7px}
+.group{background:var(--card);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;gap:12px;padding:11px 16px;min-height:48px;position:relative;width:100%;background:transparent;border:0;color:inherit;font:inherit;text-align:left}
+button.row{cursor:pointer}
+button.row:active{background:var(--fill)}
+.row + .row::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep)}
+.row .main{flex:1;min-width:0}
+.row .t{font-size:16px}
+.row .s{font-size:13px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .r{text-align:right;flex-shrink:0}
+.row .km{font-size:16px;font-weight:500}
+.chev{color:var(--fg3);font-size:20px;line-height:1;flex-shrink:0}
+.bar{height:5px;border-radius:3px;background:var(--fill);margin-top:7px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;margin-top:3px}
+.p-ok{background:var(--ok-soft);color:var(--ok)} .p-warn{background:var(--warn-soft);color:var(--warn)} .p-bad{background:var(--bad-soft);color:var(--bad)}
+.p-none{background:var(--fill);color:var(--fg2)}
+.c-ok{background:var(--ok)} .c-warn{background:var(--warn)} .c-bad{background:var(--bad)}
+
+/* hlavní karta řetězu */
+.hero{background:var(--card);border-radius:16px;padding:18px 18px 16px;box-shadow:var(--shadow)}
+.hero .lbl{font-size:13px;color:var(--fg2);display:flex;justify-content:space-between;gap:8px}
+.hero .big{font-family:var(--font-d);font-size:48px;font-weight:700;letter-spacing:-.03em;line-height:1.05;margin-top:6px}
+.hero .big small{font-size:20px;font-weight:600;letter-spacing:0;color:var(--fg2);margin-left:4px}
+.hero .bar{height:10px;border-radius:5px;margin-top:12px}
+.hero .bar i{border-radius:5px}
+.scale{display:flex;justify-content:space-between;font-size:12px;color:var(--fg2);margin-top:5px}
+.hero .note{margin-top:12px;font-size:13px;color:var(--fg2);display:flex;gap:8px;align-items:flex-start;border-top:.5px solid var(--sep);padding-top:11px}
+.hero .note .bell{flex-shrink:0;width:18px;height:18px;border-radius:5px;background:var(--accent-soft);display:grid;place-items:center;color:var(--accent);font-size:11px;font-weight:700}
+
+.sync{font-size:13px;color:var(--fg2);margin:10px 4px 0}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:6px;vertical-align:1px}
+
+.btn{appearance:none;border:0;border-radius:12px;font:600 16px var(--font);padding:13px 16px;cursor:pointer;background:var(--accent);color:#fff;width:100%}
+.btn.sec{background:var(--accent-soft);color:var(--accent)}
+.btn.dng{background:var(--bad-soft);color:var(--bad)}
+.btn[disabled]{opacity:.45;cursor:default}
+.btns{display:grid;gap:10px;margin-top:16px}
+.btns.two{grid-template-columns:1fr 1fr}
+.link{background:none;border:0;color:var(--accent);font:inherit;font-size:15px;cursor:pointer;padding:0}
+
+/* formuláře v kartách */
+.f{display:flex;align-items:center;gap:12px;padding:10px 16px;min-height:46px;position:relative}
+.f + .f::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep)}
+.f label{flex:0 0 108px;font-size:15px}
+.f input,.f select{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font:16px var(--font);text-align:right;padding:4px 0;outline:none}
+.f select{direction:rtl}
+.f input:focus{color:var(--accent)}
+.f .u{color:var(--fg2);font-size:15px}
+
+/* list vysouvaný zdola */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:680px;max-height:92%;overflow-y:auto;border-radius:14px 14px 0 0;
+  padding:8px max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:up .22s ease-out}
+@media (min-width:760px){.sheet-bg{align-items:center}.sheet{border-radius:14px;max-height:86%}}
+@keyframes up{from{transform:translateY(24px)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--fg3);margin:0 auto 10px}
+.sh-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px}
+.sh-top h2{font-family:var(--font-d);font-size:22px;margin:0;font-weight:700}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--sep);border-radius:12px;overflow:hidden;margin-top:12px}
+.kv div{background:var(--card);padding:10px 12px}
+.kv b{display:block;font-size:19px;font-weight:600}
+.kv span{font-size:12px;color:var(--fg2)}
+.cur{color:var(--accent);font-weight:600}
+
+/* souhrny */
+.cmp{padding:12px 16px}
+.cmp + .cmp{border-top:.5px solid var(--sep)}
+.cmp h3{font-size:16px;margin:0 0 2px;font-weight:600}
+.cmp .s{font-size:13px;color:var(--fg2);margin-bottom:10px}
+.hb{display:grid;grid-template-columns:62px 1fr auto;gap:8px;align-items:center;font-size:13px;margin-top:6px}
+.hb .tr{height:14px;background:var(--fill);border-radius:4px;overflow:hidden}
+.hb .tr i{display:block;height:100%;border-radius:4px;background:var(--accent)}
+.hb .tr i.live{background:repeating-linear-gradient(-45deg,var(--accent) 0 6px,var(--accent-soft) 6px 10px)}
+.hb .v{min-width:92px;text-align:right;color:var(--fg2)}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat{background:var(--card);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.stat b{display:block;font-family:var(--font-d);font-size:24px;font-weight:700;letter-spacing:-.01em}
+.stat span{font-size:13px;color:var(--fg2)}
+.yr{display:grid;grid-template-columns:44px 1fr auto;gap:8px;align-items:center;font-size:13px;padding:6px 16px}
+.yr .tr{height:12px;background:var(--fill);border-radius:3px;overflow:hidden}
+.yr .tr i{display:block;height:100%;background:var(--accent)}
+
+.inv-file{display:flex;align-items:center;gap:12px}
+.thumb{width:34px;height:42px;border-radius:5px;background:var(--fill);display:grid;place-items:center;font-size:10px;font-weight:700;color:var(--fg2);flex-shrink:0;border:.5px solid var(--sep)}
+.tag{font-size:11px;font-weight:600;padding:1px 6px;border-radius:5px;background:var(--fill);color:var(--fg2);margin-left:6px;vertical-align:1px}
+.tag.man{background:var(--accent-soft);color:var(--accent)}
+.foot{text-align:center;color:var(--fg3);font-size:12px;margin-top:28px}
+.empty{padding:16px;color:var(--fg2);font-size:14px}
+.ai{font-size:13px;color:var(--fg2);background:var(--accent-soft);border-radius:10px;padding:10px 12px;margin-top:10px}
+.it{padding:10px 16px;position:relative}
+.it + .it::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep)}
+.it .l1{display:flex;justify-content:space-between;gap:10px;font-size:15px}
+.it .l1 span:last-child{white-space:nowrap}
+.it select{margin-top:6px;width:100%;font:15px var(--font);padding:7px 8px;border-radius:8px;border:0;background:var(--fill);color:var(--fg)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px}
+.chip{border:0;border-radius:999px;padding:7px 12px;background:var(--fill);color:var(--fg);font:15px var(--font);cursor:pointer}
+.chip.on{background:var(--accent);color:#fff}
+.mseg{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--fill);border-radius:9px;padding:2px;margin-top:8px}
+.mseg button{border:0;background:transparent;color:var(--fg);font:500 14px var(--font);padding:7px 4px;border-radius:7px;cursor:pointer}
+.mseg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.14);font-weight:600}
+.vd{padding:12px 16px;position:relative}
+.vd + .vd::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep)}
+.vd select{width:100%;font:16px var(--font);padding:8px;border-radius:8px;border:0;background:var(--fill);color:var(--fg)}
+.vd .chips{padding:10px 0 0}
+.vd .cust{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:15px}
+.vd .cust input{width:90px;font:16px var(--font);padding:7px 8px;border-radius:8px;border:0;background:var(--fill);color:var(--fg);text-align:right}
+.vd .res{font-size:13px;color:var(--fg2);margin-top:8px}
+.vd .rm{float:right}
+.note-in{display:block;width:100%;border:0;background:transparent;color:var(--fg);font:16px var(--font);padding:12px 16px;min-height:72px;resize:vertical;outline:none}
+.adj{margin-top:10px;font-size:13px;background:var(--accent-soft);color:var(--accent);border-radius:9px;padding:8px 10px}
+.kon{font-size:13px;color:var(--fg2);padding:0 16px 10px 32px;margin-top:-4px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;z-index:40;max-width:calc(100% - 32px)}
+@media (max-width:360px){h1{font-size:30px}.hero .big{font-size:42px}.f label{flex-basis:92px}.seg button{font-size:12.5px}}
+</style>
+<style>
+html{color-scheme:light dark}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+.login{max-width:420px;margin:12vh auto 0}
+.login h1{margin-bottom:6px}
+.login .group{margin-top:18px}
+.err{background:var(--bad-soft);color:var(--bad);border-radius:10px;padding:10px 12px;font-size:14px;margin-top:12px;white-space:pre-wrap;word-break:break-word}
+.load{display:flex;align-items:center;gap:10px;color:var(--fg2);font-size:14px;padding:30px 4px}
+.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--fill);border-top-color:var(--accent);animation:sp .8s linear infinite;flex-shrink:0}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}}
+.it input.pp{width:100%;border:0;background:transparent;color:var(--fg);font:15px var(--font);padding:2px 0;outline:none;min-width:0}
+.it .l2{display:grid;grid-template-columns:1fr 110px;gap:8px;margin-top:6px}
+.it .l2 select{margin-top:0}
+.it .cena{display:flex;align-items:center;gap:4px;background:var(--fill);border-radius:8px;padding:0 8px}
+.it .cena input{width:100%;border:0;background:transparent;color:var(--fg);font:15px var(--font);text-align:right;padding:7px 0;outline:none;min-width:0}
+.it .rmp{font-size:13px;margin-top:6px}
+.dbg{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:50;border:2px solid var(--bad);background:var(--card);color:var(--bad);border-radius:10px;padding:8px 10px;font:12px ui-monospace,Menlo,monospace;max-height:40vh;overflow:auto;white-space:pre-wrap}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="load"><span class="spin"></span>Načítám…</div>
+</div>
+<div id="sheetHost"></div>
+<input type="file" id="invFile" accept="image/*,application/pdf" hidden>
+<input type="file" id="invCam" accept="image/*" capture="environment" hidden>
+<script>
+// MTB servis – ostrá verze (PWA + Supabase)
+const VERZE = 'verze 1';
+const SUPABASE_URL = 'https://klpcgnivfvczvvyoqzal.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_6mo7Xg3GQ4GTi9Qu7AAeKw_HKPSXacV';
+const FUNKCE = SUPABASE_URL + '/functions/v1/mtb';
+const BUCKET = 'mtb-doklady';
+
+// ---------- diagnostika (?debug=1 nebo při chybě JS) ----------
+const DEBUG = /[?&]debug=1/.test(location.search);
+function dbg(msg){
+  let el = document.getElementById('dbg');
+  if (!el){ el = document.createElement('div'); el.id='dbg'; el.className='dbg'; document.body.appendChild(el); el.onclick=()=>el.remove(); }
+  el.textContent = (el.textContent ? el.textContent+'\n' : '') + msg;
+}
+window.addEventListener('error', e=>dbg('JS: '+e.message+' ('+(e.filename||'').split('/').pop()+':'+e.lineno+')'));
+window.addEventListener('unhandledrejection', e=>dbg('Promise: '+(e.reason && (e.reason.message||e.reason))));
+
+// ---------- Supabase klient (vlastní úložiště relace – kvůli blokování localStorage) ----------
+const pamet = {};
+const uloziste = {
+  getItem:k=>{ try { const v = localStorage.getItem(k); return v ?? pamet[k] ?? null; } catch { return pamet[k] ?? null; } },
+  setItem:(k,v)=>{ pamet[k]=v; setTimeout(()=>{ try { localStorage.setItem(k,v); } catch {} },0); },
+  removeItem:k=>{ delete pamet[k]; try { localStorage.removeItem(k); } catch {} },
+};
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth:{ storage:uloziste, storageKey:'mtb-servis-auth', persistSession:true, autoRefreshToken:true, detectSessionInUrl:false }
+});
+let UID = null;
+
+// <calc>
+const TYPY = [
+  {id:'retez',     nazev:'Řetěz',              sk:'Pohon'},
+  {id:'prevodnik', nazev:'Převodník',          sk:'Pohon'},
+  {id:'kazeta',    nazev:'Kazeta',             sk:'Pohon'},
+  {id:'desP',      nazev:'Destičky přední',    sk:'Brzdy'},
+  {id:'desZ',      nazev:'Destičky zadní',     sk:'Brzdy'},
+  {id:'kotP',      nazev:'Kotouč přední',      sk:'Brzdy'},
+  {id:'kotZ',      nazev:'Kotouč zadní',       sk:'Brzdy'},
+  {id:'plaP',      nazev:'Plášť přední',       sk:'Pláště'},
+  {id:'plaZ',      nazev:'Plášť zadní',        sk:'Pláště'},
+  {id:'vidlice',   nazev:'Vidlice',            sk:'Odpružení'},
+  {id:'tlumic',    nazev:'Tlumič',             sk:'Odpružení'},
+  {id:'ostatni',   nazev:'Ostatní',            sk:'Ostatní', vice:true},
+];
+const SKUPINY = ['Pohon','Brzdy','Pláště','Odpružení','Ostatní'];
+const nazevTypu = id => (TYPY.find(t=>t.id===id)||{nazev:id}).nazev;
+
+// km kusu = součet jízd od data montáže (včetně) do data výměny (bez); den jízdy = místní datum
+function kmKusu(kus, jizdy){
+  let s = 0;
+  for (const j of jizdy){ const d = j.d.slice(0,10); if (d >= kus.od && (!kus.do || d < kus.do)) s += j.km; }
+  return s;
+}
+// stav podle limitu: <80 % ok, 80–100 % warn, ≥100 % bad
+function stav(km, limit){
+  if (!limit) return {t:'none', pct:null, zbyva:null};
+  const pct = km / limit * 100;
+  return {t: pct >= 100 ? 'bad' : pct >= 80 ? 'warn' : 'ok', pct, zbyva: limit - km};
+}
+function kcNa1000(cena, km){ return (cena && km > 0) ? cena / km * 1000 : null; }
+// </calc>
+
+function pad(n){return String(n).padStart(2,'0')}
+function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function mistni(ts){ const d = new Date(ts); return iso(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }
+
+// ---------- stav aplikace ----------
+let S = null;
+function limitKusu(k){ return k.limit ?? S.limity[k.typ] ?? null; }
+function aktualni(typ){ return S.kusy.filter(k=>k.typ===typ && !k.do).sort((a,b)=>a.od<b.od?1:-1)[0]; }
+function historie(typ){ return S.kusy.filter(k=>k.typ===typ).sort((a,b)=>a.od<b.od?-1:1); }
+function kusNaDatum(typ, datum){ return S.kusy.find(k=>k.typ===typ && k.od<=datum && (!k.do || datum<k.do)); }
+function kmKusuDo(kus, datum){ return kmKusu({od:kus.od, do:(kus.do && kus.do<datum)?kus.do:datum}, S.jizdy); }
+function castky(x){
+  let dily = Number(x.prace)||0, dopl = 0;
+  for (const p of (x.polozky||[])) { if (p.kat==='doplnky') dopl += p.cena||0; else dily += p.cena||0; }
+  return {dily, dopl, celkem: dily+dopl};
+}
+const celkemKm = () => S.jizdy.reduce((a,j)=>a+j.km,0);
+
+// ---------- databáze ----------
+async function q(p){ const {data, error} = await p; if (error) throw new Error(error.message || String(error)); return data; }
+async function nacti(){
+  const [kolo, jizdy, doklady, polozky, kusy, verdikty] = await Promise.all([
+    q(sb.from('mtb_kolo').select('*')),
+    q(sb.from('mtb_jizdy').select('id,zacatek,km,zdroj,vlozeno').order('zacatek',{ascending:false}).limit(5000)),
+    q(sb.from('mtb_doklady').select('*')),
+    q(sb.from('mtb_polozky').select('*').order('poradi')),
+    q(sb.from('mtb_kusy').select('*')),
+    q(sb.from('mtb_verdikty').select('*')),
+  ]);
+  const k = kolo[0] || {nazev:'MTB', koupe:iso(new Date()), limity:{}};
+  const st = {
+    kolo:{nazev:k.nazev, barva:k.barva, velikost:k.velikost, koupe:k.koupe},
+    limity: k.limity || {},
+    jizdy: jizdy.map(j=>({id:j.id, d:mistni(j.zacatek), km:Number(j.km), zdroj:j.zdroj, vlozeno:j.vlozeno})),
+    kusy: kusy.map(x=>({id:x.id, typ:x.komponenta, model:x.model||'', od:x.od, do:x.do, cena:x.cena==null?null:Number(x.cena),
+      dokladId:x.doklad_id, limit:x.limit_km==null?null:Number(x.limit_km), limitDokladId:x.limit_doklad_id})),
+    doklady: doklady.map(d=>({id:d.id, datum:d.datum, typ:d.typ, servis:d.servis||'', cislo:d.cislo||'', prace:Number(d.prace)||0,
+      popis:d.popis||'', ukony:d.ukony||[], poznamka:d.poznamka||'', soubor:d.soubor||'',
+      polozky: polozky.filter(p=>p.doklad_id===d.id).map(p=>({popis:p.popis, cena:p.cena==null?null:Number(p.cena), typ:p.komponenta, kat:p.kategorie})),
+      verdikty: verdikty.filter(v=>v.doklad_id===d.id).map(v=>({kusId:v.kus_id, plus:Number(v.plus_km)||0, text:v.text||''}))})),
+  };
+  S = st;
+  for (const d of S.doklady) for (const v of d.verdikty){ const kus = S.kusy.find(k=>k.id===v.kusId); v.typ = kus?kus.typ:null; v.kmPri = kus?kmKusuDo(kus, d.datum):null; }
+}
+async function obnov(zprava){
+  try { await nacti(); render(); if (zprava) toast(zprava); }
+  catch(e){ chyba('Načtení dat selhalo', e); }
+}
+function chyba(co, e){ console.error(e); toast(co+': '+(e.message||e)); if (DEBUG) dbg(co+': '+(e.stack||e.message||e)); }
+
+// ---------- formát ----------
+const fKm = (v,dec=0) => v==null ? '–' : v.toLocaleString('cs-CZ',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+const fKc = v => v==null ? '–' : v.toLocaleString('cs-CZ',{maximumFractionDigits:0})+' Kč';
+const fD = s => { const [y,m,d]=s.slice(0,10).split('-'); return (+d)+'. '+(+m)+'. '+y; };
+const MES = ['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ICONY = {
+  'Pohon':     '<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.2"/>'+[0,45,90,135,180,225,270,315].map(a=>{const r=Math.PI*a/180;return `<path d="M${(12+6.5*Math.cos(r)).toFixed(1)} ${(12+6.5*Math.sin(r)).toFixed(1)}L${(12+9.5*Math.cos(r)).toFixed(1)} ${(12+9.5*Math.sin(r)).toFixed(1)}"/>`}).join(''),
+  'Brzdy':     '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.6"/><circle cx="12" cy="6.2" r=".9"/><circle cx="17.8" cy="12" r=".9"/><circle cx="12" cy="17.8" r=".9"/><circle cx="6.2" cy="12" r=".9"/>',
+  'Pláště':    '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>',
+  'Odpružení': '<path d="M7 3h10M7 21h10M7 6l10 2.4-10 2.4 10 2.4-10 2.4 10 2.4"/>',
+  'Ostatní':   '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  'servis':    '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM9 13l2 2 4-4"/>',
+  'zivotnost': '<path d="M5 20V11M12 20V4M19 20v-7"/>',
+  'roky':      '<path d="M4 19h16M5 15l4-4 3 3 6-6"/>'
+};
+const ghIk = (nazev, ikona, vpravo='') => `<div class="gh"><span><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${ICONY[ikona]}</svg></span>${nazev}</span>${vpravo!==''?`<span>${vpravo}</span>`:''}</div>`;
+const PILL = {ok:'V pořádku', warn:'Blíží se limit', bad:'Po limitu', none:'Bez limitu'};
+const TYP_DOKLADU = {vymena:'Výměna', kontrola:'Kontrola', nakup:'Nákup'};
+
+// ---------- přihlášení ----------
+function vLogin(chybaText){
+  document.getElementById('app').innerHTML = `<div class="login">
+    <h1>MTB servis</h1><p class="sub">Přihlas se účtem ze Supabase.</p>
+    <form id="lf" class="group">
+      <div class="f"><label for="lEmail">E-mail</label><input id="lEmail" type="email" autocomplete="username" required></div>
+      <div class="f"><label for="lHeslo">Heslo</label><input id="lHeslo" type="password" autocomplete="current-password" required></div>
+    </form>
+    <div class="btns"><button class="btn" id="lBtn" form="lf" type="submit">Přihlásit</button></div>
+    ${chybaText?`<div class="err">${esc(chybaText)}</div>`:''}
+    <p class="foot">${VERZE}</p></div>`;
+  document.getElementById('lf').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const b = document.getElementById('lBtn'); b.disabled = true; b.textContent = 'Přihlašuji…';
+    const {error} = await sb.auth.signInWithPassword({email:document.getElementById('lEmail').value.trim(), password:document.getElementById('lHeslo').value});
+    if (error) vLogin(error.message === 'Invalid login credentials' ? 'Špatný e-mail nebo heslo.' : error.message);
+  });
+}
+
+// ---------- hlavní kostra ----------
+let tab = (()=>{ try { return localStorage.getItem('mtb-tab') || 'prehled'; } catch { return 'prehled'; } })();
+function kostra(){
+  document.getElementById('app').innerHTML = `
+  <header class="top">
+    <h1>MTB servis</h1>
+    <p class="sub" id="bikeSub"></p>
+  </header>
+  <nav class="seg" role="tablist" aria-label="Sekce">
+    <button role="tab" data-tab="prehled">Přehled</button>
+    <button role="tab" data-tab="vymeny">Servis</button>
+    <button role="tab" data-tab="jizdy">Jízdy</button>
+    <button role="tab" data-tab="souhrny">Souhrny</button>
+  </nav>
+  <main id="view"></main>
+  <p class="foot">${VERZE} · <button class="link" id="btnOdhl" style="font-size:12px">Odhlásit</button></p>`;
+  document.querySelector('.seg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; tab=b.dataset.tab; try{localStorage.setItem('mtb-tab',tab)}catch{} smazCekani=null; render(); window.scrollTo({top:0}); });
+  document.getElementById('view').addEventListener('click', klikView);
+  document.getElementById('btnOdhl').onclick = async ()=>{ await sb.auth.signOut(); };
+}
+function render(){
+  if (!S || !document.getElementById('view')) return;
+  const k = S.kolo;
+  document.getElementById('bikeSub').innerHTML =
+    `<span style="color:var(--fg);font-weight:600">${esc(k.nazev)}</span>${k.barva?' · '+esc(k.barva):''}${k.velikost?' · vel. '+esc(k.velikost):''}<br><span class="num">${fKm(celkemKm())} km od ${fD(k.koupe)}</span>`;
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-selected', b.dataset.tab===tab));
+  document.getElementById('view').innerHTML = ({prehled:vPrehled, vymeny:vVymeny, jizdy:vJizdy, souhrny:vSouhrny})[tab]();
+}
+
+function vPrehled(){
+  const k = aktualni('retez');
+  let h = '';
+  if (k){
+    const km = kmKusu(k,S.jizdy), lim = limitKusu(k), st = stav(km, lim), pct = Math.min(100, st.pct||0);
+    const zb = !lim ? `<span class="num">${fKm(km)}</span><small>km</small>` : st.zbyva >= 0 ? `<span class="num">${fKm(st.zbyva)}</span><small>km do limitu</small>` :
+                               `<span class="num">${fKm(-st.zbyva)}</span><small>km po limitu</small>`;
+    const ozn = !lim ? 'Bez limitu – nastav ho v detailu řetězu.' : st.t==='ok' ? 'Oznámení přijde při 80 % limitu.' :
+                st.t==='warn' ? `Po jízdě přijde oznámení: „Řetěz: zbývá ${fKm(st.zbyva)} km“.` :
+                `Po jízdě přijde oznámení: „Řetěz: limit překročen o ${fKm(-st.zbyva)} km“.`;
+    h += `<button class="hero row" style="display:block;padding:18px" data-typ="retez" aria-label="Detail řetězu">
+      <div class="lbl"><span>Řetěz · ${esc(k.model)}</span><span class="pill p-${st.t}" style="margin:0">${PILL[st.t]}</span></div>
+      <div class="big" style="color:${st.t==='ok'||st.t==='none'?'var(--fg)':'var(--'+st.t+')'}">${zb}</div>
+      ${lim?`<div class="bar"><i class="c-${st.t}" style="width:${pct}%"></i></div>
+      <div class="scale num"><span>${fKm(km)} km ujeto</span><span>limit ${fKm(lim)} km</span></div>`:''}
+      ${upravaText(k)?`<div class="adj">${upravaText(k)}</div>`:''}
+      <div class="note"><span class="bell">!</span><span>${ozn}</span></div>
+    </button>`;
+  }
+  const posl = S.jizdy[0], zapis = S.jizdy.reduce((m,j)=>j.vlozeno>m?j.vlozeno:m,'');
+  h += `<div class="sync"><span class="dot"></span>${posl?'Poslední jízda '+fD(posl.d):'Zatím žádná jízda'}${zapis?' · poslední zápis '+fD(mistni(zapis))+' '+mistni(zapis).slice(11,16):''}</div>`;
+  for (const sk of SKUPINY){
+    let rows = '';
+    for (const t of TYPY.filter(t=>t.sk===sk)){
+      const kusy = t.vice ? S.kusy.filter(x=>x.typ===t.id && !x.do) : [aktualni(t.id)].filter(Boolean);
+      if (!kusy.length){ rows += `<button class="row" data-typ="${t.id}"><div class="main"><div class="t">${t.nazev}</div><div class="s">Zatím nic</div></div><span class="chev">›</span></button>`; continue; }
+      for (const kus of kusy){
+        const km = kmKusu(kus,S.jizdy), l = limitKusu(kus), s = stav(km,l);
+        rows += `<button class="row" data-typ="${t.id}">
+          <div class="main"><div class="t">${t.vice?esc(kus.model):t.nazev}</div><div class="s">${t.vice?'od '+fD(kus.od):esc(kus.model)}</div>
+          ${l?`<div class="bar"><i class="c-${s.t}" style="width:${Math.min(100,s.pct)}%"></i></div>`:''}</div>
+          <div class="r"><div class="km num">${fKm(km)} km</div>${l?`<span class="pill p-${s.t}">${s.zbyva>=0?'zbývá '+fKm(s.zbyva):'+'+fKm(-s.zbyva)}</span>`:''}</div>
+          <span class="chev">›</span></button>`;
+      }
+    }
+    h += ghIk(sk, sk) + `<div class="group">${rows}</div>`;
+  }
+  return h;
+}
+
+function popisDokladu(x){
+  const pol = x.polozky.filter(p=>!/^(sleva|zaokrouhlení)/i.test(p.popis));
+  if (x.typ==='kontrola' && x.ukony.length) return x.ukony.join(', ');
+  return pol.map(p=>p.typ&&p.typ!=='ostatni'?nazevTypu(p.typ):p.popis.split(' ').slice(0,2).join(' ')).join(', ') || x.popis || x.cislo;
+}
+function vVymeny(){
+  let h = `<div class="btns two"><button class="btn" id="btnFoto">Vyfotit fakturu</button><button class="btn" id="btnFaktura">Nahrát fakturu</button></div>
+  <div class="btns" style="margin-top:10px"><button class="btn sec" id="btnKontrola">Přidat kontrolu</button></div>
+  <p class="sub" style="margin:8px 4px 0">Faktura = výměna dílů nebo nákup, položky přečte AI. Kontrola = servis bez výměny a ústní verdikt k řetězu. Doplňky a údržba se počítají jen do nákladů.</p>`;
+  const zaz = [...S.doklady].sort((a,b)=>a.datum<b.datum?1:a.datum>b.datum?-1:0);
+  h += ghIk('Servisní záznamy','servis',zaz.length) + `<div class="group">`;
+  if (!zaz.length) h += `<div class="empty">Zatím žádný doklad.</div>`;
+  for (const x of zaz){
+    const sum = castky(x).celkem;
+    const ikona = x.soubor ? (/\.pdf$/i.test(x.soubor)?'PDF':'JPG') : (x.typ==='kontrola'?'✓':'·');
+    h += `<button class="row" data-dok="${x.id}"><div class="thumb"${ikona==='✓'?' style="color:var(--accent)"':''}>${ikona}</div>
+      <div class="main"><div class="t">${fD(x.datum)} · ${TYP_DOKLADU[x.typ]||x.typ}</div><div class="s">${esc(popisDokladu(x))}</div></div>
+      <div class="r"><div class="km num">${sum?fKc(sum):''}</div></div><span class="chev">›</span></button>`;
+  }
+  return h + '</div>';
+}
+
+function verdiktText(v){ return v.plus>0 ? 'vydrží ještě ~'+fKm(v.plus)+' km' : 'v pořádku'; }
+function upravaText(kus){
+  if (!kus.limit) return '';
+  const c = S.doklady.find(x=>x.id===kus.limitDokladId), v = c && c.verdikty.find(v=>v.kusId===kus.id);
+  return c && v ? `Limit tohoto kusu upraven po kontrole ${fD(c.datum)}: ${verdiktText(v)} (${fKm(v.kmPri)} km + ${fKm(v.plus)} km = ${fKm(kus.limit)} km).`
+                : `Limit tohoto kusu je upravený na ${fKm(kus.limit)} km.`;
+}
+
+let mesLimit = 4, smazCekani = null;
+function vJizdy(){
+  let h = `<div class="btns two"><button class="btn sec" id="btnRucne">Přidat jízdu ručně</button><button class="btn sec" id="btnSync">Spustit zkratku</button></div>
+  <p class="sub" style="margin:8px 4px 0">Jízdy chodí ze Zdraví zkratkou MTB jízdy po zavření Garmin Connect. Ručně jen výjimky, např. jízda s Apple Watch.</p>`;
+  const po = {};
+  for (const j of S.jizdy){ const k=j.d.slice(0,7); (po[k]=po[k]||[]).push(j); }
+  const mes = Object.keys(po).sort().reverse();
+  for (const m of mes.slice(0, mesLimit)){
+    const arr = po[m], sum = arr.reduce((a,j)=>a+j.km,0), [y,mm] = m.split('-');
+    h += `<div class="gh"><span>${MES[+mm-1]} ${y}</span><span class="num">${arr.length}× · ${fKm(sum,1)} km</span></div><div class="group">`;
+    for (const j of arr){
+      const tag = j.zdroj==='rucne'?'<span class="tag man">ručně</span>':j.zdroj==='sportstracker'?'<span class="tag">Sports Tracker</span>':'';
+      h += `<div class="row"><div class="main"><div class="t num">${fKm(j.km,1)} km${tag}</div></div>
+        <div class="r s num" style="color:var(--fg2)">${fD(j.d)}${j.zdroj==='sportstracker'?'':' '+j.d.slice(11,16)}</div>
+        ${j.zdroj==='rucne'?`<button class="link" data-smaz="${j.id}" style="font-size:14px;margin-left:6px">${smazCekani===j.id?'Opravdu?':'Smazat'}</button>`:''}</div>`;
+    }
+    h += '</div>';
+  }
+  if (mes.length > mesLimit) h += `<div class="btns"><button class="btn sec" id="btnVice">Starší měsíce (${mes.length-mesLimit})</button></div>`;
+  return h;
+}
+
+function vSouhrny(){
+  const vsechnyKc = S.doklady.reduce((a,x)=>a+castky(x).dily,0), doplKc = S.doklady.reduce((a,x)=>a+castky(x).dopl,0);
+  const tot = celkemKm();
+  let h = `<div class="stats">
+    <div class="stat"><b class="num">${fKm(tot)} km</b><span>ujeto od koupě</span></div>
+    <div class="stat"><b class="num">${fKc(vsechnyKc)}</b><span>servis a díly celkem</span></div>
+    <div class="stat"><b class="num">${tot?fKc(vsechnyKc/tot*1000):'–'}</b><span>na 1000 km</span></div>
+    <div class="stat"><b class="num">${fKc(doplKc)}</b><span>doplňky a údržba</span></div></div>`;
+  h += ghIk('Životnost dílů','zivotnost','proužky = aktuální kus') + `<div class="group">`;
+  for (const t of TYPY.filter(t=>!t.vice)){
+    const hist = historie(t.id); if (hist.length < 2) continue;
+    const data = hist.map(k=>({k, km:kmKusu(k,S.jizdy)}));
+    const ukonc = data.filter(d=>d.k.do);
+    const prum = ukonc.reduce((a,d)=>a+d.km,0)/ukonc.length;
+    const naKm = ukonc.filter(d=>d.k.cena).map(d=>kcNa1000(d.k.cena,d.km));
+    const max = Math.max(...data.map(d=>d.km), S.limity[t.id]||0, 1);
+    h += `<div class="cmp"><h3>${t.nazev}</h3><div class="s num">${hist.length} kusy · průměrně ${fKm(prum)} km${naKm.length?' · '+fKc(naKm.reduce((a,b)=>a+b,0)/naKm.length)+' / 1000 km':''}</div>`;
+    [...data].reverse().forEach(d=>{
+      h += `<div class="hb num"><span>${d.k.od===S.kolo.koupe?'z výroby':d.k.od.slice(0,7).split('-').reverse().join('/')}</span>
+        <div class="tr"><i class="${d.k.do?'':'live'}" style="width:${d.km/max*100}%"></i></div>
+        <span class="v">${fKm(d.km)} km${d.k.cena&&d.k.do?' · '+fKc(kcNa1000(d.k.cena,d.km)):''}</span></div>`;
+    });
+    h += '</div>';
+  }
+  h += '</div>';
+  const roky = {}; for (const j of S.jizdy){ const y=j.d.slice(0,4); roky[y]=(roky[y]||0)+j.km; }
+  const mx = Math.max(1, ...Object.values(roky));
+  h += ghIk('Najeto po letech','roky') + `<div class="group" style="padding:8px 0">`;
+  for (const y of Object.keys(roky).sort().reverse()) h += `<div class="yr num"><span>${y}</span><div class="tr"><i style="width:${roky[y]/mx*100}%"></i></div><span>${fKm(roky[y])} km</span></div>`;
+  return h + '</div>';
+}
+
+// ---------- listy ----------
+function sheet(html){
+  const host = document.getElementById('sheetHost');
+  host.innerHTML = `<div class="sheet-bg" id="sbg"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div></div>`;
+  document.getElementById('sbg').addEventListener('click', e=>{ if (e.target.id==='sbg' || e.target.closest('[data-zavrit]')) zavri(); });
+}
+function zavri(){ document.getElementById('sheetHost').innerHTML=''; }
+function toast(t){ const d=document.createElement('div'); d.className='toast'; d.textContent=t; document.body.appendChild(d); setTimeout(()=>d.remove(),3000); }
+function zaneprazdni(btn, text){ if (btn){ btn.disabled = true; btn.dataset.puv = btn.textContent; btn.textContent = text; } }
+function uvolni(btn){ if (btn){ btn.disabled = false; if (btn.dataset.puv) btn.textContent = btn.dataset.puv; } }
+
+function detail(typ){
+  const t = TYPY.find(x=>x.id===typ), hist = historie(typ), cur = aktualni(typ);
+  const km = cur ? kmKusu(cur,S.jizdy) : 0, l = cur ? limitKusu(cur) : S.limity[typ], st = stav(km,l);
+  let h = `<div class="sh-top"><h2>${t.nazev}</h2><button class="link" data-zavrit>Hotovo</button></div>
+  ${cur?`<div class="sub" style="margin:0">${esc(cur.model)} · od ${fD(cur.od)}</div>`:''}
+  <div class="kv num"><div><b>${fKm(km)}</b><span>km ujeto</span></div>
+    <div><b style="color:${st.t==='none'||st.t==='ok'?'var(--fg)':'var(--'+st.t+')'}">${l?fKm(st.zbyva):'–'}</b><span>km do limitu</span></div>
+    <div><b>${cur&&cur.cena?fKc(cur.cena):'–'}</b><span>cena</span></div></div>
+  ${t.vice?'':`<div class="gh"><span>Servisní limit</span></div>
+  <div class="group"><div class="f"><label for="limIn">Běžný limit</label><input id="limIn" type="number" inputmode="numeric" min="0" step="50" value="${S.limity[typ]??''}" placeholder="bez limitu"><span class="u">km</span></div></div>
+  ${cur&&cur.limit?`<div class="adj">${upravaText(cur)} Další kus dostane opět běžný limit. <button class="link" id="zrusUpr" style="font-size:13px">Zrušit úpravu</button></div>`:''}`}
+  <div class="gh"><span>Historie kusů</span></div><div class="group">`;
+  if (!hist.length) h += `<div class="empty">Zatím žádný kus.</div>`;
+  for (const k of [...hist].reverse()){
+    const kkm = kmKusu(k,S.jizdy);
+    h += `<div class="row"><div class="main"><div class="t">${esc(k.model)}${k.do?'':' <span class="tag man">teď</span>'}</div>
+      <div class="s">${fD(k.od)} – ${k.do?fD(k.do):'dosud'}${k.cena&&k.do?' · '+fKc(kcNa1000(k.cena,kkm))+' / 1000 km':''}</div></div>
+      <div class="r"><div class="km num">${fKm(kkm)} km</div><div class="s">${k.cena?fKc(k.cena):''}</div></div></div>`;
+    for (const c of S.doklady) for (const v of c.verdikty) if (v.kusId===k.id)
+      h += `<div class="kon">Kontrola ${fD(c.datum)} při ${fKm(v.kmPri)} km: ${verdiktText(v)}</div>`;
+  }
+  h += `</div><div class="gh"><span>${t.vice?'Přidat díl bez faktury':'Zaznamenat výměnu bez faktury'}</span></div>
+  <div class="group">
+    <div class="f"><label for="vDat">Datum</label><input id="vDat" type="date" value="${iso(new Date())}"></div>
+    <div class="f"><label for="vMod">Model</label><input id="vMod" type="text" placeholder="např. Sram GX Eagle 12s"></div>
+    <div class="f"><label for="vCena">Cena</label><input id="vCena" type="number" inputmode="numeric" placeholder="0"><span class="u">Kč</span></div>
+  </div>
+  <div class="btns${t.vice?'':' two'}">${t.vice?'':'<button class="btn sec" id="ulozLim">Uložit limit</button>'}<button class="btn" id="ulozVym">${t.vice?'Přidat díl':'Vyměněno'}</button></div>`;
+  sheet(h);
+  const zu = document.getElementById('zrusUpr');
+  if (zu) zu.onclick = async ()=>{
+    if (!zu.dataset.ok){ zu.dataset.ok=1; zu.textContent='Opravdu zrušit?'; return; }
+    try { await q(sb.from('mtb_kusy').update({limit_km:null, limit_doklad_id:null}).eq('id', cur.id)); zavri(); obnov('Úprava limitu zrušena'); }
+    catch(e){ chyba('Uložení selhalo', e); }
+  };
+  const ul = document.getElementById('ulozLim');
+  if (ul) ul.onclick = async ()=>{
+    const v = document.getElementById('limIn').value, limity = {...S.limity};
+    if (v) limity[typ] = +v; else delete limity[typ];
+    zaneprazdni(ul,'Ukládám…');
+    try { await q(sb.from('mtb_kolo').update({limity, upraveno:new Date().toISOString()}).eq('user_id', UID)); zavri(); obnov('Limit uložen'); }
+    catch(e){ uvolni(ul); chyba('Uložení selhalo', e); }
+  };
+  const uv = document.getElementById('ulozVym');
+  uv.onclick = async ()=>{
+    const d=document.getElementById('vDat').value, m=document.getElementById('vMod').value.trim(), c=document.getElementById('vCena').value;
+    if (!d || !m){ toast('Doplň datum a model'); return; }
+    zaneprazdni(uv,'Ukládám…');
+    try { await novyKus(typ, d, m, c? +c : null, null); zavri(); obnov(t.nazev+': nový kus od '+fD(d)); }
+    catch(e){ uvolni(uv); chyba('Uložení selhalo', e); }
+  };
+}
+
+// nový kus komponenty: předchozí kus (na kole k datu) se uzavře datem výměny
+async function novyKus(typ, datum, model, cena, dokladId){
+  const t = TYPY.find(x=>x.id===typ);
+  if (model && model.toLowerCase().startsWith(t.nazev.toLowerCase()+' ')) model = model.slice(t.nazev.length+1);
+  let doKonce = null;
+  if (!t.vice){
+    const stary = kusNaDatum(typ, datum);
+    if (stary){
+      if (stary.od === datum) throw new Error(t.nazev+': k tomuto datu už je namontovaný jiný kus');
+      doKonce = stary.do;  // výměna zpětně mezi dvěma kusy: nový kus končí tam, kde končil starý
+      await q(sb.from('mtb_kusy').update({do:datum}).eq('id', stary.id));
+      stary.do = datum;
+    } else {
+      const dalsi = S.kusy.filter(k=>k.typ===typ && k.od>datum).sort((a,b)=>a.od<b.od?-1:1)[0];
+      if (dalsi) doKonce = dalsi.od;
+    }
+  }
+  await q(sb.from('mtb_kusy').insert({komponenta:typ, model, od:datum, do:doKonce, cena, doklad_id:dokladId}));
+}
+
+function detailDokladu(id){
+  const f = S.doklady.find(x=>x.id===id), sum = castky(f).celkem;
+  let h = `<div class="sh-top"><h2>${TYP_DOKLADU[f.typ]||'Doklad'}</h2><button class="link" data-zavrit>Hotovo</button></div>
+  <div class="sub" style="margin:0">${fD(f.datum)}${f.servis?' · '+esc(f.servis):''}${f.cislo?' · '+esc(f.cislo):''}</div>
+  ${f.soubor?`<div class="group" style="margin-top:12px"><button class="row inv-file" id="otevriSken"><div class="thumb">${/\.pdf$/i.test(f.soubor)?'PDF':'JPG'}</div><div class="main"><div class="t">Otevřít sken</div><div class="s">${esc(f.soubor.split('/').pop())}</div></div><span class="chev">›</span></button></div>`:''}
+  ${f.popis?`<div class="gh"><span>Servis</span></div><div class="group"><div class="row"><div class="main"><div class="t">${esc(f.popis)}</div></div></div></div>`:''}
+  ${f.ukony.length?`<div class="gh"><span>Úkony</span></div><div class="group">${f.ukony.map(u=>`<div class="row"><div class="main"><div class="t">${esc(u)}</div></div></div>`).join('')}</div>`:''}
+  ${f.verdikty.length?`<div class="gh"><span>Verdikt servisu</span></div><div class="group">${f.verdikty.map(v=>`<div class="row"><div class="main"><div class="t">${nazevTypu(v.typ)}</div><div class="s">${esc(v.text||'')}${v.kmPri!=null?(v.text?' · ':'')+'při '+fKm(v.kmPri)+' km':''}</div></div><div class="r"><span class="pill ${v.plus>0?'p-warn':'p-ok'}">${verdiktText(v)}</span></div></div>`).join('')}</div>`:''}`;
+  if (f.polozky.length || f.prace){
+    h += `<div class="gh"><span>Položky</span></div><div class="group">`;
+    for (const p of f.polozky) h += `<div class="row"><div class="main"><div class="t">${esc(p.popis)}</div><div class="s">${p.typ?'→ '+nazevTypu(p.typ):p.kat==='doplnky'?'doplňky a údržba':'servis a díly'}</div></div><div class="r num">${p.cena===null?'vlastní':fKc(p.cena)}</div></div>`;
+    if (f.prace) h += `<div class="row"><div class="main"><div class="t">Práce</div></div><div class="r num">${fKc(f.prace)}</div></div>`;
+    h += `<div class="row"><div class="main"><div class="t" style="font-weight:600">Celkem</div></div><div class="r num" style="font-weight:600">${fKc(sum)}</div></div></div>`;
+  }
+  if (f.poznamka) h += `<div class="gh"><span>Poznámka</span></div><div class="group"><div class="row"><div class="main"><div class="t">${esc(f.poznamka)}</div></div></div></div>`;
+  sheet(h);
+  const os = document.getElementById('otevriSken');
+  if (os) os.onclick = async ()=>{
+    const w = window.open('', '_blank');
+    try {
+      const {data, error} = await sb.storage.from(BUCKET).createSignedUrl(f.soubor, 600);
+      if (error) throw error;
+      if (w) w.location = data.signedUrl; else location.href = data.signedUrl;
+    } catch(e){ if (w) w.close(); chyba('Sken nejde otevřít', e); }
+  };
+}
+
+// ---------- kontrola ----------
+function novaKontrola(){
+  const UKONY = ['Seřízení přehazovačky','Kontrola řetězu','Mazání','Odvzdušnění brzd','Servis vidlice','Servis tlumiče','Kontrola ložisek','Celková kontrola'];
+  const sel = new Set(['Seřízení přehazovačky','Kontrola řetězu']);
+  const verd = [{typ:'retez', plus:500}];
+  const posl = [...S.doklady].sort((a,b)=>a.datum<b.datum?1:-1).find(d=>d.servis);
+  sheet(`<div class="sh-top"><h2>Nová kontrola</h2><button class="link" data-zavrit>Zrušit</button></div>
+  <div class="sub" style="margin:0">Servis bez výměny dílů.</div>
+  <div class="group" style="margin-top:12px">
+    <div class="f"><label for="nkDat">Datum</label><input id="nkDat" type="date" value="${iso(new Date())}"></div>
+    <div class="f"><label for="nkSer">Servis</label><input id="nkSer" type="text" value="${esc(posl?posl.servis:'')}"></div>
+    <div class="f"><label for="nkPr">Práce</label><input id="nkPr" type="number" inputmode="numeric" placeholder="0"><span class="u">Kč</span></div>
+  </div>
+  <div class="gh"><span>Úkony</span></div><div class="group"><div class="chips" id="nkUk"></div></div>
+  <div class="gh"><span>Verdikt ke komponentám</span></div><div class="group" id="nkVd"></div>
+  <div class="btns"><button class="btn sec" id="nkPridej">Další komponenta</button></div>
+  <div class="gh"><span>Co řekli v servisu</span></div><div class="group"><textarea class="note-in" id="nkPoz" placeholder="např. řetěz ještě vydrží do jara"></textarea></div>
+  <div class="btns"><button class="btn" id="nkUloz">Uložit kontrolu</button></div>`);
+  const opts = s1 => TYPY.filter(t=>!t.vice).map(t=>`<option value="${t.id}"${t.id===s1?' selected':''}>${t.nazev}</option>`).join('');
+  function ru(){ document.getElementById('nkUk').innerHTML = UKONY.map(u=>`<button class="chip${sel.has(u)?' on':''}" data-uk="${esc(u)}" aria-pressed="${sel.has(u)}">${esc(u)}</button>`).join(''); }
+  function rv(){
+    const d = document.getElementById('nkDat').value || iso(new Date());
+    document.getElementById('nkVd').innerHTML = verd.map((v,i)=>{
+      const kus = kusNaDatum(v.typ, d) || aktualni(v.typ), kmP = kus ? kmKusuDo(kus, d) : 0;
+      return `<div class="vd">${verd.length>1?`<button class="link rm" data-rm="${i}" style="font-size:14px">Odebrat</button>`:''}
+        <select data-vt="${i}" aria-label="Komponenta">${opts(v.typ)}</select>
+        <div class="mseg"><button class="${v.plus>0?'':'on'}" data-ok="${i}">V pořádku</button><button class="${v.plus>0?'on':''}" data-pl="${i}">Vydrží ještě</button></div>
+        ${v.plus>0?`<div class="chips">${[300,500,1000].map(n=>`<button class="chip${v.plus===n?' on':''}" data-plus="${i}:${n}">+${fKm(n)} km</button>`).join('')}</div>
+        <div class="cust"><span>Jiné:</span><input type="text" inputmode="numeric" data-cust="${i}" value="${[300,500,1000].includes(v.plus)?'':v.plus}" placeholder="km" aria-label="Vlastní počet km"><span>km</span></div>
+        <div class="res num">Teď ${fKm(kmP)} km → limit tohoto kusu ${fKm(kmP+v.plus)} km</div>`
+        :`<div class="res num">Teď ${fKm(kmP)} km, limit se nemění.</div>`}</div>`;
+    }).join('');
+  }
+  ru(); rv();
+  const sh = document.querySelector('.sheet');
+  sh.addEventListener('click', async e=>{
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.uk){ sel.has(b.dataset.uk)?sel.delete(b.dataset.uk):sel.add(b.dataset.uk); return ru(); }
+    if (b.dataset.ok!==undefined){ verd[+b.dataset.ok].plus = 0; return rv(); }
+    if (b.dataset.pl!==undefined){ const v=verd[+b.dataset.pl]; if (!(v.plus>0)) v.plus=500; return rv(); }
+    if (b.dataset.plus){ const [i,n]=b.dataset.plus.split(':'); verd[+i].plus=+n; return rv(); }
+    if (b.dataset.rm!==undefined){ verd.splice(+b.dataset.rm,1); return rv(); }
+    if (b.id==='nkPridej'){ const pouzite=new Set(verd.map(v=>v.typ)); const t=TYPY.find(t=>!t.vice&&!pouzite.has(t.id)); if (t){ verd.push({typ:t.id, plus:0}); rv(); } return; }
+    if (b.id==='nkUloz'){
+      const d = document.getElementById('nkDat').value;
+      if (!d){ toast('Doplň datum'); return; }
+      zaneprazdni(b,'Ukládám…');
+      try {
+        const [dok] = await q(sb.from('mtb_doklady').insert({datum:d, typ:'kontrola', servis:document.getElementById('nkSer').value.trim()||null,
+          prace:+document.getElementById('nkPr').value||0, ukony:[...sel], poznamka:document.getElementById('nkPoz').value.trim()||null}).select());
+        let novyLimit = null;
+        for (const v of verd){
+          const kus = kusNaDatum(v.typ, d); if (!kus) continue;
+          await q(sb.from('mtb_verdikty').insert({doklad_id:dok.id, kus_id:kus.id, plus_km:v.plus||0}));
+          if (v.plus>0){
+            const lim = Math.round(kmKusuDo(kus, d) + v.plus);
+            await q(sb.from('mtb_kusy').update({limit_km:lim, limit_doklad_id:dok.id}).eq('id', kus.id));
+            if (!novyLimit) novyLimit = nazevTypu(v.typ)+': nový limit '+fKm(lim)+' km';
+          }
+        }
+        zavri(); tab='prehled'; obnov(novyLimit || 'Kontrola uložena');
+      } catch(e){ uvolni(b); chyba('Uložení selhalo', e); }
+    }
+  });
+  sh.addEventListener('change', e=>{
+    if (e.target.dataset.vt!==undefined){ verd[+e.target.dataset.vt].typ = e.target.value; rv(); }
+    if (e.target.dataset.cust!==undefined){ const n = parseInt(e.target.value,10); if (n>0){ verd[+e.target.dataset.cust].plus = n; rv(); } }
+    if (e.target.id==='nkDat') rv();
+  });
+}
+
+// ---------- faktura: nahrání, čtení AI, kontrola, uložení ----------
+async function zmensiObrazek(file){
+  if (!/^image\//.test(file.type)) return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const max = 2000, k = Math.min(1, max/Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width*k); c.height = Math.round(bmp.height*k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise(r=>c.toBlob(r, 'image/jpeg', 0.85));
+    return blob ? new File([blob], 'faktura.jpg', {type:'image/jpeg'}) : file;
+  } catch { return file; }
+}
+function bezpecneJmeno(n){ return n.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'-').slice(-60); }
+
+async function novaFaktura(file){
+  sheet(`<div class="sh-top"><h2>Nová faktura</h2><button class="link" data-zavrit>Zrušit</button></div>
+    <div class="load"><span class="spin"></span><span id="nfStav">Nahrávám soubor…</span></div>`);
+  let cesta = null, navrh = null, info = '';
+  try {
+    const f = await zmensiObrazek(file);
+    const pdf = f.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    cesta = `${UID}/${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}-${bezpecneJmeno(pdf ? file.name : 'faktura.jpg')}`;
+    await q(sb.storage.from(BUCKET).upload(cesta, f, {contentType: pdf ? 'application/pdf' : (f.type||'image/jpeg'), upsert:false}));
+    const st = document.getElementById('nfStav'); if (st) st.textContent = 'Čtu fakturu (AI)…';
+    const {data:{session}} = await sb.auth.getSession();
+    const r = await fetch(FUNKCE+'?akce=faktura', {method:'POST', headers:{'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token, 'apikey':SUPABASE_KEY}, body:JSON.stringify({cesta})});
+    const out = await r.json().catch(()=>({chyba:'Odpověď funkce není JSON (HTTP '+r.status+')'}));
+    if (out.navrh){ navrh = out.navrh; info = 'Položky přečetla AI. Zkontroluj datum, ceny a přiřazení ke komponentám.'; }
+    else info = 'AI fakturu nepřečetla ('+(out.chyba||'HTTP '+r.status)+'). Vyplň položky ručně.';
+  } catch(e){
+    if (!cesta || !document.getElementById('nfStav')) { chyba('Nahrání selhalo', e); zavri(); return; }
+    info = 'Fakturu se nepodařilo přečíst ('+(e.message||e)+'). Vyplň položky ručně.';
+  }
+  if (!document.getElementById('sheetHost').innerHTML) return; // uživatel mezitím zavřel
+  formularFaktury(cesta, navrh || {datum:iso(new Date()), dodavatel:'', cislo:'', typ:'vymena', prace:0, popis:'', ukony:[], polozky:[{popis:'', cena:null, komponenta:null, kategorie:'dily'}]}, info);
+}
+
+function formularFaktury(cesta, n, info){
+  const pol = (n.polozky||[]).map(p=>({popis:p.popis||'', cena:p.cena, v: p.komponenta ? 'k:'+p.komponenta : (p.kategorie||'dily')}));
+  const opts = v => `<option value="dily"${v==='dily'?' selected':''}>— díl bez komponenty —</option><option value="doplnky"${v==='doplnky'?' selected':''}>Doplňky a údržba</option>`
+    + TYPY.map(t=>`<option value="k:${t.id}"${v==='k:'+t.id?' selected':''}>${t.nazev}</option>`).join('');
+  sheet(`<div class="sh-top"><h2>Nová faktura</h2><button class="link" data-zavrit>Zrušit</button></div>
+  <div class="ai">${esc(info)}</div>
+  <div class="group" style="margin-top:12px">
+    <div class="f"><label for="nfDat">Datum</label><input id="nfDat" type="date" value="${esc(n.datum||iso(new Date()))}"></div>
+    <div class="f"><label for="nfDod">Servis</label><input id="nfDod" type="text" value="${esc(n.dodavatel||'')}"></div>
+    <div class="f"><label for="nfCis">Číslo</label><input id="nfCis" type="text" value="${esc(n.cislo||'')}"></div>
+    <div class="f"><label for="nfPr">Práce</label><input id="nfPr" type="number" inputmode="decimal" value="${Number(n.prace)||0}"><span class="u">Kč</span></div>
+  </div>
+  <div class="gh"><span>Položky</span><span id="nfSum" class="num"></span></div><div class="group" id="nfPol"></div>
+  <div class="btns"><button class="btn sec" id="nfPridej">Přidat položku</button></div>
+  <div class="gh"><span>Popis servisu</span></div><div class="group"><textarea class="note-in" id="nfPop" placeholder="např. výměna řetězu, odvzdušnění brzd">${esc([n.popis, ...(n.ukony||[])].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join('; '))}</textarea></div>
+  <div class="btns"><button class="btn" id="nfUloz">Uložit fakturu a výměny</button></div>`);
+  const host = document.getElementById('nfPol');
+  function cti(){ host.querySelectorAll('.it').forEach((el,i)=>{ pol[i].popis = el.querySelector('.pp').value; const c = el.querySelector('.cc').value.replace(',','.').trim(); pol[i].cena = c===''?null:Number(c); pol[i].v = el.querySelector('select').value; }); }
+  function suma(){ const s = pol.reduce((a,p)=>a+(Number(p.cena)||0),0) + (Number(document.getElementById('nfPr').value)||0); document.getElementById('nfSum').textContent = 'celkem '+fKc(s); }
+  function kresli(){
+    host.innerHTML = pol.map((p,i)=>`<div class="it">
+      <input class="pp" value="${esc(p.popis)}" placeholder="Popis položky" aria-label="Popis položky ${i+1}">
+      <div class="l2"><select aria-label="Komponenta">${opts(p.v)}</select>
+        <div class="cena"><input class="cc" type="text" inputmode="decimal" value="${p.cena==null?'':String(p.cena).replace('.',',')}" placeholder="vlastní" aria-label="Cena"><span class="u">Kč</span></div></div>
+      <button class="link rmp" data-rmp="${i}">Odebrat</button></div>`).join('') || `<div class="empty">Bez položek – jen práce.</div>`;
+    suma();
+  }
+  kresli();
+  const sh = document.querySelector('.sheet');
+  sh.addEventListener('input', ()=>{ cti(); suma(); });
+  sh.addEventListener('click', async e=>{
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.rmp!==undefined){ cti(); pol.splice(+b.dataset.rmp,1); kresli(); return; }
+    if (b.id==='nfPridej'){ cti(); pol.push({popis:'', cena:null, v:'dily'}); kresli(); return; }
+    if (b.id!=='nfUloz') return;
+    cti();
+    const datum = document.getElementById('nfDat').value;
+    if (!datum){ toast('Doplň datum'); return; }
+    const polozky = pol.filter(p=>p.popis.trim() || p.cena!=null).map((p,i)=>({poradi:i, popis:p.popis.trim()||'Položka', cena:p.cena,
+      komponenta: p.v.startsWith('k:') ? p.v.slice(2) : null, kategorie: p.v==='doplnky' ? 'doplnky' : 'dily'}));
+    const prace = Number(document.getElementById('nfPr').value)||0;
+    const typ = polozky.some(p=>p.komponenta) ? 'vymena' : (polozky.some(p=>p.kategorie==='dily' && (p.cena||0)>0) || prace>0) ? 'kontrola' : 'nakup';
+    zaneprazdni(b,'Ukládám…');
+    try {
+      const [dok] = await q(sb.from('mtb_doklady').insert({datum, typ, servis:document.getElementById('nfDod').value.trim()||null, cislo:document.getElementById('nfCis').value.trim()||null,
+        prace, popis:document.getElementById('nfPop').value.trim()||null, soubor:cesta}).select());
+      if (polozky.length) await q(sb.from('mtb_polozky').insert(polozky.map(p=>({...p, doklad_id:dok.id}))));
+      let n = 0;
+      for (const p of polozky) if (p.komponenta){ await novyKus(p.komponenta, datum, p.popis, p.cena, dok.id); n++; await nacti(); }
+      zavri(); tab = n ? 'prehled' : 'vymeny'; obnov(n ? 'Uloženo: '+n+(n===1?' výměna':n<5?' výměny':' výměn') : 'Faktura uložena');
+    } catch(e){ uvolni(b); chyba('Uložení selhalo', e); }
+  });
+}
+
+// ---------- ruční jízda ----------
+function rucniJizda(){
+  const now = new Date();
+  sheet(`<div class="sh-top"><h2>Jízda ručně</h2><button class="link" data-zavrit>Zrušit</button></div>
+  <div class="sub" style="margin:0">Pro jízdy, které nezaznamenal Garmin.</div>
+  <div class="group" style="margin-top:12px">
+    <div class="f"><label for="rjDat">Datum</label><input id="rjDat" type="date" value="${iso(now)}"></div>
+    <div class="f"><label for="rjCas">Začátek</label><input id="rjCas" type="time" value="${pad(now.getHours())}:${pad(now.getMinutes())}"></div>
+    <div class="f"><label for="rjKm">Vzdálenost</label><input id="rjKm" type="text" inputmode="decimal" placeholder="0,0" autocomplete="off"><span class="u">km</span></div>
+  </div>
+  <div class="btns"><button class="btn" id="rjUloz">Přidat jízdu</button></div>`);
+  const b = document.getElementById('rjUloz');
+  b.onclick = async ()=>{
+    const km = parseFloat(String(document.getElementById('rjKm').value).replace(',','.'));
+    if (!(km>0 && km<1000)){ toast('Zadej vzdálenost v km'); return; }
+    const zacatek = new Date(document.getElementById('rjDat').value+'T'+(document.getElementById('rjCas').value||'12:00')).toISOString();
+    zaneprazdni(b,'Ukládám…');
+    try { await q(sb.from('mtb_jizdy').insert({zacatek, km:Math.round(km*1000)/1000, zdroj:'rucne'})); zavri(); obnov('Jízda přidána: '+fKm(km,1)+' km'); }
+    catch(e){ uvolni(b); chyba('Uložení selhalo', /duplicate/i.test(e.message)?new Error('jízda se stejným začátkem už existuje'):e); }
+  };
+}
+
+// ---------- události ----------
+async function klikView(e){
+  const r = e.target.closest('[data-typ]'); if (r) return detail(r.dataset.typ);
+  const f = e.target.closest('[data-dok]'); if (f) return detailDokladu(f.dataset.dok);
+  const s = e.target.closest('[data-smaz]');
+  if (s){
+    const id = +s.dataset.smaz;
+    if (smazCekani!==id){ smazCekani = id; return render(); }
+    smazCekani = null;
+    try { await q(sb.from('mtb_jizdy').delete().eq('id', id)); obnov('Jízda smazána'); } catch(err){ chyba('Smazání selhalo', err); }
+    return;
+  }
+  const id = e.target.id;
+  if (id==='btnFaktura') return document.getElementById('invFile').click();
+  if (id==='btnFoto') return document.getElementById('invCam').click();
+  if (id==='btnRucne') return rucniJizda();
+  if (id==='btnKontrola') return novaKontrola();
+  if (id==='btnVice'){ mesLimit+=6; return render(); }
+  if (id==='btnSync'){ location.href = 'shortcuts://run-shortcut?name='+encodeURIComponent('MTB jízdy'); }
+}
+for (const id of ['invFile','invCam']) document.getElementById(id).addEventListener('change', e=>{ const f=e.target.files[0]; e.target.value=''; if (f) novaFaktura(f); });
+document.addEventListener('keydown', e=>{ if (e.key==='Escape') zavri(); });
+// po návratu do appky (např. ze zkratky) načíst čerstvá data
+document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState==='visible' && UID && !document.getElementById('sheetHost').innerHTML) obnov(); });
+
+// ---------- start ----------
+let spusteno = false;
+async function start(session){
+  if (!session){ UID = null; S = null; spusteno = false; vLogin(); return; }
+  if (spusteno && UID === session.user.id) return;
+  UID = session.user.id; spusteno = true;
+  kostra();
+  document.getElementById('view').innerHTML = `<div class="load"><span class="spin"></span>Načítám data…</div>`;
+  try { await nacti(); render(); }
+  catch(e){ document.getElementById('view').innerHTML = `<div class="err">Data se nepodařilo načíst: ${esc(e.message||e)}</div>`; if (DEBUG) dbg(e.stack||e); }
+}
+sb.auth.onAuthStateChange((ev, session)=>{ if (ev==='SIGNED_OUT') start(null); else if (session) start(session); });
+sb.auth.getSession().then(({data})=>start(data.session));
+if ('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
