@@ -35,8 +35,10 @@ Osobní PWA: opotřebení komponent Vladanova MTB podle ujetých km, limity s up
 - Verze 2.
 - Odloženo: záznam měrky řetězu (až Vladan ověří značení měrky).
 
-## Otevřené otázky
-- SQL tabulek a kód Edge Function `mtb` nejsou v repu – doplnit složku `supabase/`.
+## Supabase v repu
+- `supabase/schema.sql` (tabulky, pohled `mtb_stav_kusu`, RLS, Storage) + `supabase/functions/mtb/` – snímek 2026-11-14, postup změn v `supabase/README.md`.
+- Limity komponent v `mtb_kolo.limity` (výchozí hodnota sloupce: řetěz 1500 km, destičky přední 3000, zadní 2000); vlastní limit kusu `mtb_kusy.limit_km` má přednost.
+- Upozornění na limit: funkce `mtb` je vrací zkratce při ≥ 80 % limitu.
 
 ## Neměnit
 - Oddělený Supabase projekt (nespojovat s pracovním).
