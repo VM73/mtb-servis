@@ -22,6 +22,7 @@ Osobní PWA: opotřebení komponent Vladanova MTB podle ujetých km, limity s up
 - Indoor cycling se nepočítá (je v Apple Watch / Sports Tracker, ne v Garminu).
 
 ## Pravidla
+- **Dopad na náklady a limity:** u každé úpravy předem zvážit a v souhrnu oznámit dopad na Claude (tokeny), GitHub (Actions minuty, Pages), Supabase (DB, Storage, Edge Functions – free tier), OpenAI/Anthropic API (cena za volání). Když se nic nemění, napsat „bez dopadu“.
 - Nejjednodušší řešení, měnit jen nutné.
 - UI česky, iOS vzhled, od 320 px.
 - Diagnostika: `?debug=1` nebo při chybě JS se ukáže panel s logem; viditelné číslo verze.
