@@ -16,6 +16,6 @@ v Supabase → Edge Functions → Secrets.
 
 ## Pravidlo pro další změny
 1. Změnu databáze napsat jako nový soubor `migrations/RRRRMMDDHHMM_popis.sql`.
-2. Spustit v Supabase (SQL Editor), ověřit v appce.
+2. Spustit přes konektor Supabase (po Vladanově souhlasu; bez konektoru v SQL Editoru), ověřit v appce.
 3. Obnovit `schema.sql` (nechat Clauda stáhnout znovu).
 4. Změnu Edge Function nejdřív v repu, pak nasadit – ne naopak.
